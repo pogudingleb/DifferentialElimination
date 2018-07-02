@@ -52,7 +52,7 @@
 
   GetOrders := proc(diff_poly, vars) 
   local result, diff_vars, i, diff_v, decomposition;
-    result := [seq(0, i = 0..nops(vars))];
+    result := [seq(-1, i = 0..nops(vars))];
     diff_vars := indets(diff_poly):
     for i from 1 to nops(vars) do
       for diff_v in diff_vars do
@@ -65,10 +65,20 @@
     return result;
   end proc:
 
+  GetOrdersForSystem := proc(eqs, vars)
+  local i, h;
+    h := [seq(-1, i = 1..nops(vars))]:
+    for i from 1 to nops(eqs) do
+      ord := GetOrders(eqs[i], vars):
+      h := [seq(max(h[i], ord[i] + 1), i = 1..nops(vars))]:
+    end do:
+    h;
+  end proc;
+
 #####################################################################
 
-  # the value of R_u(dim, deg)
-  Ru := proc(dim, deg) 
+  # the value of R_u(m, D)
+  B := proc(dim, deg) 
   local result, i;
     result := 0:
     for i from 0 to dim do
@@ -77,49 +87,68 @@
     result;
   end proc:
 
-  ComputeBoundRaw := proc(m, d0, d1, h_sum, r, radical := false)
+  ComputeBoundRaw := proc(m, d0, d1, h_sum, r)
   local i, result;
     result := 0:
     for i from 0 to m do
-      result := result + Ru(i, d0 * d1^(h_sum - i - 1)):
+      result := result + B(i, d0 * d1^(h_sum - i - 1)):
     end do:
-    if radical = false then
-      result := result * d0 * d1^(min(h_sum, r) - 1):
-    end if:
+    result := result * d0 * d1^(min(h_sum, r) - 1):
     result;
   end proc:
 
-  ComputeBound := proc(eqs, vars_to_eliminate, radical := false) 
+  ComputeBound := proc(eqs, vars_to_eliminate, radical := true) 
   local diff_vars_to_eliminate, m, d0, d1, h, i, ord, h_sum;
-    diff_vars_to_eliminate := select(
-      v -> nops(DecomposeDerivative(v, vars_to_eliminate)) = 2,
-      indets(eqs)
-    ):
-    m := Groebner[HilbertDimension](eqs, diff_vars_to_eliminate):
-    d0 := min( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
-    d1 := max( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
-    h := [seq(0, i = 1..nops(vars_to_eliminate))]:
-    for i from 1 to nops(eqs) do
-      ord := GetOrders(eqs[i], vars_to_eliminate):
-      h := [seq(max(h[i], ord[i]), i = 1..nops(vars_to_eliminate))]:
+    h := GetOrdersForSystem(eqs, vars_to_eliminate):
+    diff_vars_to_eliminate := {}:
+    for i from 1 to nops(h) do
+      for j from 0 to h[i] - 1 do
+        diff_vars_to_eliminate := { op(diff_vars_to_eliminate), MakeDerivative(vars_to_eliminate[i], j) };
+      end do:
     end do:
-    h_sum := foldl(`+`, op(h)):
-    ComputeBoundRaw(m, d0, d1, h_sum, nops(eqs), radical);
+    m := Groebner[HilbertDimension](eqs, diff_vars_to_eliminate):
+
+    if radical then
+      ideal := PolynomialIdeals[PolynomialIdeal](eqs, variables = diff_vars_to_eliminate):
+      if PolynomialIdeals[IsRadical](ideal) = false then
+        print("The ideal is not actually radical!");
+      end if:
+      components := [PolynomialIdeals[PrimeDecomposition](ideal)]:
+      degrees := [seq(0, i = 0..m)]:
+      for i from 1 to nops(components) do
+        hpoly := Groebner[HilbertPolynomial]( PolynomialIdeals[Generators](components[i]), tdeg(op(diff_vars_to_eliminate), aux_var), hilb_var ):
+        dim := degree(hpoly, hilb_var):
+        deg := coeff(hpoly, hilb_var, dim) * (dim)!:
+        if hpoly <> 0 then
+          degrees[dim + 1] := degrees[dim + 1] + deg:
+        end if:
+      end do:
+      result := 0:
+      for j from 0 to m do
+        for i from 0 to j do
+          if degrees[j + 1] > 0 then
+            result := result + degrees[j + 1]^( 2 * (2^i - 1) ):
+          end if:
+        end do:
+      end do:
+      result;
+    else
+      d0 := min( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
+      d1 := max( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
+      h_sum := foldl(`+`, op(h)):
+      ComputeBoundRaw(m, d0, d1, h_sum, nops(eqs));
+    end if:
   end proc:
 
-  CheckPossibilityElimination := proc(eqs, vars, vars_to_eliminate, p := 0.99, radical := false) 
+  CheckPossibilityElimination := proc(eqs, vars, vars_to_eliminate, p := 0.99, radical := true, method := "groebner") 
   local i, B, prolonged, h, h_sum, vars_to_keep, diff_vars_to_eliminate, diff_vars_to_keep, degrees, sample_size, roll,
-  specialization, gb, result;
+  specialization, gb, result, ord;
     B := ComputeBound(eqs, vars_to_eliminate, radical);
     prolonged := eqs;
-    h := [seq(0, i = 1..nops(vars))]:
-    for i from 1 to nops(eqs) do
-      ord := GetOrders(eqs[i], vars):
-      h := [seq(max(h[i], ord[i]), i = 1..nops(vars))]:
-    end do:
+    h := GetOrdersForSystem(eqs, vars):
     h_sum := foldl(`+`, op(h)):
     vars_to_keep := select(v -> not v in vars_to_eliminate, vars):
-    result := -1:
+    result := "no elimination":
 
     for i from 1 to B do
       prolonged := [
@@ -140,26 +169,34 @@
       sample_size := ceil(foldl(`*`, op(degrees)) / (1 - p)):
       roll := rand(sample_size):
       specialization := map(v -> v = roll(), diff_vars_to_keep):
-      gb := Groebner[Basis]( subs(specialization, prolonged), tdeg(op(diff_vars_to_eliminate)) ):
-      if gb = [1] then
-        result := i:
-        break:
+      prolonged_spec := subs(specialization, prolonged);
+      if method = "groebner" then
+        gb := Groebner[Basis]( subs(specialization, prolonged), tdeg(op(diff_vars_to_eliminate)) ):
+        if gb = [1] then
+          result := i:
+          break:
+        end if:
+      elif method = "triangular" then
+        ring := RegularChains[PolynomialRing]([op(diff_vars_to_eliminate)]);
+        tr := RegularChains[Triangularize](prolonged_spec, ring);
+        if (nops(tr) = 0) or (RegularChains[Equations](tr[1], ring) = [1]) then
+          result := i:
+          break:
+        end if:
+      else
+        print("No such method");
       end if:
     end do:
 
     result:
   end proc:
 
-  DifferentialElimination := proc(eqs, vars, vars_to_eliminate, number_prolongations := -1, radical := false) 
-  local B;
+  DifferentialElimination := proc(eqs, vars, vars_to_eliminate, number_prolongations := -1, radical := true) 
+  local B, prolonged, h, i, ord, h_sum, vars_to_keep, result, diff_vars_to_eliminate, diff_vars_to_keep, eliminant;
     B := ComputeBound(eqs, vars_to_eliminate, radical);
     prolonged := eqs;
 
-    h := [seq(0, i = 1..nops(vars))]:
-    for i from 1 to nops(eqs) do
-      ord := GetOrders(eqs[i], vars):
-      h := [seq(max(h[i], ord[i]), i = 1..nops(vars))]:
-    end do:
+    h := GetOrdersForSystem(eqs, vars):
     h_sum := foldl(`+`, op(h)):
     vars_to_keep := select(v -> not v in vars_to_eliminate, vars):
     result := []:
