@@ -66,7 +66,7 @@
   end proc:
 
   GetOrdersForSystem := proc(eqs, vars)
-  local i, h;
+  local i, h, ord;
     h := [seq(-1, i = 1..nops(vars))]:
     for i from 1 to nops(eqs) do
       ord := GetOrders(eqs[i], vars):
@@ -98,7 +98,8 @@
   end proc:
 
   ComputeBound := proc(eqs, vars_to_eliminate, radical := true) 
-  local diff_vars_to_eliminate, m, d0, d1, h, i, ord, h_sum;
+  local diff_vars_to_eliminate, m, d0, d1, h, i, j, ord, h_sum, ideal, 
+  components, degrees, hpoly, dim, deg, result;
     h := GetOrdersForSystem(eqs, vars_to_eliminate):
     diff_vars_to_eliminate := {}:
     for i from 1 to nops(h) do
@@ -142,7 +143,7 @@
 
   CheckPossibilityElimination := proc(eqs, vars, vars_to_eliminate, p := 0.99, radical := true, method := "groebner") 
   local i, B, prolonged, h, h_sum, vars_to_keep, diff_vars_to_eliminate, diff_vars_to_keep, degrees, sample_size, roll,
-  specialization, gb, result, ord;
+  specialization, gb, result, ord, prolonged_spec, ring, tr;
     B := ComputeBound(eqs, vars_to_eliminate, radical);
     prolonged := eqs;
     h := GetOrdersForSystem(eqs, vars):
