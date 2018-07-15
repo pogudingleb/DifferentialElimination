@@ -9,7 +9,9 @@ eqs := [
   x0^2 + y0^2 - 1,
   x0 * u0 + y0 * v0,
   Differentiate(x0 * u0 + y0 * v0, vars, 5)
-];
+]:
+
+print(ConvertToDiffForm(eqs, vars));
 
 for w in ["with", "without"] do
   for var in [x, y] do
@@ -27,11 +29,11 @@ for w in ["with", "without"] do
     print(cat("Bound given by the theorem ", ComputeBound(eqs_s, to_eliminate, true)));
     prolongations := CheckPossibilityElimination(eqs_s, vars, to_eliminate, 0.99, true);
     if prolongations = "no elimination" then
-      print("Elimination is impossible with probability > 99%"):
+      print("Elimination is impossible with probability at least 99%"):
     else
-      print(cat("Elimination is possible after ", prolongations, " prolongations with probability > 99%")):
+      print(cat("Elimination is possible after ", prolongations, " prolongations with probability at least 99%")):
       result := DifferentialElimination(eqs_s, vars, to_eliminate, prolongations):
-      print(cat("The result is ", result)):
+      print(cat("The result is ", ConvertToDiffForm(result, vars))):
     end if:
   end do:
 end do:

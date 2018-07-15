@@ -6,7 +6,8 @@ eqs := [
   x1_1 - u1_0 - x2_0,
   x2_1 - u2_0 - x1_0,
   x3_1 - x3_0 * (u1_0 + u2_1 - x3_0)
-];
+]:
+print(ConvertToDiffForm(eqs, vars));
 
 for i from 1 to 3 do
   print(cat("Eliminating u1_, u2_, and ", vars[i])):
@@ -17,10 +18,10 @@ for i from 1 to 3 do
   print(cat("The bound given by Theorem 2.3 is ", ComputeBound(eqs, to_eliminate))):
   prolongations := CheckPossibilityElimination(eqs, vars, to_eliminate):
   if prolongations = "no elimination" then
-    print("Elimination is not possible"):
+    print("Elimination is not possible with probability at least 99%"):
   else
     print(cat("Elimination is possible after ", prolongations, " prolongations")):
-    print(cat("The result is ", DifferentialElimination(eqs, vars, to_eliminate, prolongations))):
+    print(cat("The result is ", ConvertToDiffForm(DifferentialElimination(eqs, vars, to_eliminate, prolongations), vars))):
   end if:
 end do:
 
