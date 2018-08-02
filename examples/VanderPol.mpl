@@ -1,3 +1,6 @@
+# Example 1 from the paper https://arxiv.org/abs/1610.04022
+# Limiting case of the Van der Pol oscillator, taken from Kunkel and Mehrmann "Differential-Algebraic Equations: Analysis and Numerical Solution" (Example 1.7)
+
 read "../DifferentialElimination.mpl":
 
 vars := [y, z];

@@ -1,6 +1,8 @@
+# Example 4 from the paper https://arxiv.org/abs/1610.04022 
+# The system is of the form usual in control theory, where x1, x2, x3 are state variables and u1, u2 are controls
+
 read "../DifferentialElimination.mpl":
 
-# Unknown functions
 vars := [x1_, x2_, x3_, u1_, u2_];
 eqs := [
   x1_1 - u1_0 - x2_0,

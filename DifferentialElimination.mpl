@@ -1,8 +1,8 @@
-# Implementation of algorithms based on a paper
+# Implementation of algorithms based on the paper
 # "Bounds for  elimination of unknowns in systems of differential-algebraic  equations"
 # by A. Ovchinnikov, G. Pogudin, and N. Thieu Vo
 
-  # Computes B(m, D) defined in equation (9) in the paper
+  # Computes B(m, D) defined in equation (11) in the paper
   B := proc(dim, deg) 
   local result, i;
     result := 0:
@@ -12,7 +12,7 @@
     result;
   end proc:
 
-  # Computation corresponding to formula (17)
+  # Computation corresponding to formula (19)
   ComputeBoundRaw := proc(m, d0, d1, h_sum, r)
   local i, result;
     result := 0:
@@ -23,7 +23,7 @@
     result;
   end proc:
 
-  # depending on the value of "radical" parameter, computes a bound given by Theorem 2.1 or Theorem 2.2
+  # depending on the value of "radical" parameter, computes a bound given by Theorem 1 or Theorem 2
   ComputeBound := proc(eqs, vars_to_eliminate, radical := true) 
   local diff_vars_to_eliminate, m, d0, d1, h, i, j, ord, h_sum, ideal, 
   components, degrees, hpoly, dim, deg, result;
@@ -37,7 +37,7 @@
     m := Groebner[HilbertDimension](eqs, diff_vars_to_eliminate):
 
     if radical then
-      # bound given by Theorem 2.2
+      # bound given by Theorem 2
       ideal := PolynomialIdeals[PolynomialIdeal](eqs, variables = diff_vars_to_eliminate):
       if PolynomialIdeals[IsRadical](ideal) = false then
         print("The ideal is not actually radical!");
@@ -62,7 +62,7 @@
       end do:
       result;
     else
-      # bound given by Theorem 2.1
+      # bound given by Theorem 1
       d0 := min( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
       d1 := max( seq(degree(eqs[i], diff_vars_to_eliminate), i = 1..nops(eqs)) ):
       h_sum := foldl(`+`, op(h)):
